@@ -463,7 +463,7 @@ const Lesson = () => {
                 </div>
                 <div className="xp-time">
                   <span className="fire-icon">🔥</span>
-                  <span>{Math.floor(sessionTime / 60)} mins • {progressData.totalStudyTime} mins</span>
+                  <span>{Math.floor((sessionTime + (progressData.totalStudyTime || 0)) / 60)} mins total</span>
                 </div>
               </div>
               <div className="xp-progress-bar">
