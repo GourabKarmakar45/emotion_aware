@@ -114,6 +114,8 @@ Analytics (View performance)
 
 ## Setup
 
+### Frontend Setup
+
 1. Install dependencies:
 ```bash
 npm install
@@ -125,6 +127,32 @@ npm start
 ```
 
 3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Backend Setup
+
+1. Navigate to backend folder:
+```bash
+cd backend
+```
+
+2. Install backend dependencies:
+```bash
+npm install
+```
+
+3. Start the backend server:
+```bash
+npm start
+```
+
+The backend will run on `http://localhost:5000`
+
+### Demo Login Credentials
+
+```
+Email: emma@example.com
+Password: password123
+```
 
 ## Tech Stack
 
