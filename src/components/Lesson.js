@@ -177,9 +177,14 @@ const Lesson = () => {
       setCurrentSection(currentSection + 1);
     } else {
       // Lesson complete - save progress to backend
+      // Pass sessionTime to quiz for cumulative tracking
       saveLessonProgress(subject.name, topic.name, sessionTime).catch(console.error);
+      
+      // Store current session time in sessionStorage for analytics
+      sessionStorage.setItem('lastSessionTime', sessionTime.toString());
+      
       // Go to quiz
-      navigate('/quiz', { state: { subject, topic } });
+      navigate('/quiz', { state: { subject, topic, sessionTime } });
     }
   };
 

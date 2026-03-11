@@ -13,7 +13,20 @@ const Analytics = () => {
     const fetchProgress = async () => {
       try {
         const data = await getUserProgress();
-        setProgressData(data);
+        
+        // Get last session time from sessionStorage (set when lesson was completed)
+        const lastSessionTime = parseInt(sessionStorage.getItem('lastSessionTime') || '0');
+        
+        // Calculate total study time including current session
+        const totalStudyTime = (data.totalStudyTime || 0) + lastSessionTime;
+        
+        setProgressData({
+          ...data,
+          totalStudyTime: totalStudyTime
+        });
+        
+        // Clear the session storage after reading
+        sessionStorage.removeItem('lastSessionTime');
       } catch (error) {
         console.error('Failed to fetch progress:', error);
         // Use default data if fetch fails
