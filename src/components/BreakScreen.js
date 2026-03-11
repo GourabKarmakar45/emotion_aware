@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './BreakScreen.css';
 
 const BreakScreen = () => {
   const navigate = useNavigate();
-  const [breakTime, setBreakTime] = useState(120); // 2 minutes in seconds
+  const location = useLocation();
+  const suggestedTime = location.state?.suggestedTime || 120; // Default 2 minutes
+  const [breakTime, setBreakTime] = useState(suggestedTime);
   const [isActive, setIsActive] = useState(true);
 
   useEffect(() => {
@@ -55,7 +57,7 @@ const BreakScreen = () => {
                 cy="50"
                 r="45"
                 style={{
-                  strokeDashoffset: `${283 - (283 * breakTime) / 120}`
+                  strokeDashoffset: `${283 - (283 * breakTime) / suggestedTime}`
                 }}
               />
             </svg>

@@ -17,9 +17,12 @@ const users = [
     id: 1,
     name: 'Emma',
     email: 'emma@example.com',
-    password: '$2a$10$8K1p/a0dL3LKzOWR7N.Nje.xjNvZr5tVhvjLb5fJ5qYqZ5Z5Z5Z5Z' // password: "password123"
+    password: '$2a$10$DKxm8kOlz4wY9n/xTJ5XUejZZ9VFt4lkhIcgtd.9DCwHD8uzRqphi' // password: "password123"
   }
 ];
+
+// User progress storage (in-memory)
+const userProgress = {};
 
 // Register endpoint
 app.post('/api/register', async (req, res) => {
@@ -44,6 +47,16 @@ app.post('/api/register', async (req, res) => {
     };
 
     users.push(newUser);
+
+    // Initialize user progress
+    userProgress[newUser.id] = {
+      quizzes: [],
+      lessonsCompleted: [],
+      totalStudyTime: 0,
+      xpEarned: 0,
+      achievements: [],
+      emotionHistory: []
+    };
 
     // Generate token
     const token = jwt.sign({ id: newUser.id, email: newUser.email }, JWT_SECRET, {
@@ -79,6 +92,18 @@ app.post('/api/login', async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Initialize progress if not exists
+    if (!userProgress[user.id]) {
+      userProgress[user.id] = {
+        quizzes: [],
+        lessonsCompleted: [],
+        totalStudyTime: 0,
+        xpEarned: 0,
+        achievements: [],
+        emotionHistory: []
+      };
     }
 
     // Generate token
@@ -131,6 +156,184 @@ app.get('/api/user', verifyToken, (req, res) => {
   });
 });
 
+// Save quiz result
+app.post('/api/progress/quiz', verifyToken, (req, res) => {
+  try {
+    const { subject, topic, score, totalQuestions, xpEarned, timeSpent } = req.body;
+    
+    if (!userProgress[req.userId]) {
+      userProgress[req.userId] = {
+        quizzes: [],
+        lessonsCompleted: [],
+        totalStudyTime: 0,
+        xpEarned: 0,
+        achievements: [],
+        emotionHistory: []
+      };
+    }
+
+    const quizResult = {
+      id: Date.now(),
+      subject,
+      topic,
+      score,
+      totalQuestions,
+      percentage: Math.round((score / totalQuestions) * 100),
+      xpEarned,
+      timeSpent: timeSpent || 0,
+      completedAt: new Date().toISOString()
+    };
+
+    userProgress[req.userId].quizzes.push(quizResult);
+    userProgress[req.userId].xpEarned += xpEarned;
+
+    // Check for achievements
+    const quizCount = userProgress[req.userId].quizzes.length;
+    const perfectQuizzes = userProgress[req.userId].quizzes.filter(q => q.percentage === 100).length;
+    
+    if (quizCount >= 1 && !userProgress[req.userId].achievements.includes('first-quiz')) {
+      userProgress[req.userId].achievements.push('first-quiz');
+    }
+    if (perfectQuizzes >= 1 && !userProgress[req.userId].achievements.includes('perfect-score')) {
+      userProgress[req.userId].achievements.push('perfect-score');
+    }
+    if (quizCount >= 5 && !userProgress[req.userId].achievements.includes('quiz-master')) {
+      userProgress[req.userId].achievements.push('quiz-master');
+    }
+
+    res.json({ success: true, quizResult });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Save lesson completion
+app.post('/api/progress/lesson', verifyToken, (req, res) => {
+  try {
+    const { subject, topic, timeSpent } = req.body;
+    
+    if (!userProgress[req.userId]) {
+      userProgress[req.userId] = {
+        quizzes: [],
+        lessonsCompleted: [],
+        totalStudyTime: 0,
+        xpEarned: 0,
+        achievements: [],
+        emotionHistory: []
+      };
+    }
+
+    const lessonKey = `${subject}-${topic}`;
+    
+    if (!userProgress[req.userId].lessonsCompleted.includes(lessonKey)) {
+      userProgress[req.userId].lessonsCompleted.push(lessonKey);
+      userProgress[req.userId].totalStudyTime += timeSpent || 10;
+      
+      // Check for lesson achievements
+      const lessonCount = userProgress[req.userId].lessonsCompleted.length;
+      if (lessonCount >= 1 && !userProgress[req.userId].achievements.includes('first-lesson')) {
+        userProgress[req.userId].achievements.push('first-lesson');
+      }
+      if (lessonCount >= 5 && !userProgress[req.userId].achievements.includes('dedicated-learner')) {
+        userProgress[req.userId].achievements.push('dedicated-learner');
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Save emotion data
+app.post('/api/progress/emotion', verifyToken, (req, res) => {
+  try {
+    const { emotion, confidence, timestamp } = req.body;
+    
+    if (!userProgress[req.userId]) {
+      userProgress[req.userId] = {
+        quizzes: [],
+        lessonsCompleted: [],
+        totalStudyTime: 0,
+        xpEarned: 0,
+        achievements: [],
+        emotionHistory: []
+      };
+    }
+
+    userProgress[req.userId].emotionHistory.push({
+      emotion,
+      confidence,
+      timestamp: timestamp || new Date().toISOString()
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get user analytics/progress
+app.get('/api/progress', verifyToken, (req, res) => {
+  try {
+    const progress = userProgress[req.userId] || {
+      quizzes: [],
+      lessonsCompleted: [],
+      totalStudyTime: 0,
+      xpEarned: 0,
+      achievements: [],
+      emotionHistory: []
+    };
+
+    // Calculate analytics
+    const totalQuizzes = progress.quizzes.length;
+    const averageScore = totalQuizzes > 0 
+      ? Math.round(progress.quizzes.reduce((sum, q) => sum + q.percentage, 0) / totalQuizzes)
+      : 0;
+    
+    // Get emotion breakdown
+    const emotionCounts = {};
+    progress.emotionHistory.forEach(e => {
+      emotionCounts[e.emotion] = (emotionCounts[e.emotion] || 0) + 1;
+    });
+    
+    const totalEmotions = progress.emotionHistory.length;
+    const emotionBreakdown = Object.keys(emotionCounts).map(emotion => ({
+      emotion,
+      percentage: totalEmotions > 0 ? Math.round((emotionCounts[emotion] / totalEmotions) * 100) : 0,
+      color: emotion === 'Focused' ? '#10b981' : emotion === 'Happy' ? '#fbbf24' : emotion === 'Neutral' ? '#6b7280' : emotion === 'Confused' ? '#ef4444' : '#a855f7'
+    }));
+
+    // Get most recent quiz
+    const recentQuiz = totalQuizzes > 0 
+      ? progress.quizzes[progress.quizzes.length - 1]
+      : null;
+
+    // Determine focus score based on emotion history
+    // Include both 'Focused' and 'Happy' emotions as they both indicate good engagement
+    const focusedCount = emotionCounts['Focused'] || 0;
+    const happyCount = emotionCounts['Happy'] || 0;
+    const focusScore = totalEmotions > 0 
+      ? Math.round(((focusedCount + happyCount) / totalEmotions) * 100) 
+      : 0;
+
+    res.json({
+      totalStudyTime: progress.totalStudyTime,
+      focusScore,
+      xpEarned: progress.xpEarned,
+      topicsCompleted: progress.lessonsCompleted.length,
+      quizScore: averageScore,
+      totalQuizzes,
+      emotionBreakdown,
+      recentQuiz,
+      achievements: progress.achievements,
+      quizHistory: progress.quizzes.slice(-10) // Last 10 quizzes
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
@@ -142,3 +345,4 @@ app.listen(PORT, () => {
   console.log('Email: emma@example.com');
   console.log('Password: password123');
 });
+

@@ -1,30 +1,87 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUserProgress } from '../services/api';
 import './Analytics.css';
 
 const Analytics = () => {
   const navigate = useNavigate();
+  
+  const [loading, setLoading] = useState(true);
+  const [progressData, setProgressData] = useState(null);
 
-  const sessionData = {
-    totalTime: '45 mins',
-    focusScore: 78,
-    xpEarned: 180,
-    topicsCompleted: 2,
-    quizScore: 80
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const data = await getUserProgress();
+        setProgressData(data);
+      } catch (error) {
+        console.error('Failed to fetch progress:', error);
+        // Use default data if fetch fails
+        setProgressData({
+          totalStudyTime: 0,
+          focusScore: 0,
+          xpEarned: 0,
+          topicsCompleted: 0,
+          quizScore: 0,
+          totalQuizzes: 0,
+          emotionBreakdown: [],
+          achievements: [],
+          recentQuiz: null
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProgress();
+  }, []);
+
+  // Default values for when data is loading or not available
+  const sessionData = progressData ? {
+    totalTime: `${progressData.totalStudyTime || 0} mins`,
+    focusScore: progressData.focusScore || 0,
+    xpEarned: progressData.xpEarned || 0,
+    topicsCompleted: progressData.topicsCompleted || 0,
+    quizScore: progressData.quizScore || 0,
+    totalQuizzes: progressData.totalQuizzes || 0
+  } : {
+    totalTime: '0 mins',
+    focusScore: 0,
+    xpEarned: 0,
+    topicsCompleted: 0,
+    quizScore: 0,
+    totalQuizzes: 0
   };
 
-  const emotionData = [
-    { emotion: 'Focused', percentage: 65, color: '#10b981' },
-    { emotion: 'Happy', percentage: 20, color: '#fbbf24' },
-    { emotion: 'Neutral', percentage: 10, color: '#6b7280' },
-    { emotion: 'Confused', percentage: 5, color: '#ef4444' }
+  const emotionData = progressData?.emotionBreakdown?.length > 0 
+    ? progressData.emotionBreakdown
+    : [
+      { emotion: 'Focused', percentage: 0, color: '#10b981' },
+      { emotion: 'Happy', percentage: 0, color: '#fbbf24' },
+      { emotion: 'Neutral', percentage: 0, color: '#6b7280' },
+      { emotion: 'Confused', percentage: 0, color: '#ef4444' }
+    ];
+
+  const allAchievements = [
+    { name: 'First Quiz', icon: '🎯', earned: progressData?.achievements?.includes('first-quiz') || false },
+    { name: 'Perfect Score', icon: '💯', earned: progressData?.achievements?.includes('perfect-score') || false },
+    { name: 'Quiz Master', icon: '🏆', earned: progressData?.achievements?.includes('quiz-master') || false },
+    { name: 'First Lesson', icon: '📚', earned: progressData?.achievements?.includes('first-lesson') || false },
+    { name: 'Dedicated Learner', icon: '⭐', earned: progressData?.achievements?.includes('dedicated-learner') || false }
   ];
 
-  const achievements = [
-    { name: 'Focus Master', icon: '🎯', earned: true },
-    { name: 'Quick Learner', icon: '⚡', earned: true },
-    { name: 'Quiz Champion', icon: '🏆', earned: false }
-  ];
+  if (loading) {
+    return (
+      <div className="analytics-container">
+        <div className="analytics-header">
+          <div className="header-content">
+            <h1 className="analytics-title">Loading...</h1>
+            <p className="analytics-subtitle">Fetching your progress data</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="analytics-container">
@@ -128,7 +185,7 @@ const Analytics = () => {
         <div className="achievements-section">
           <h2 className="section-title">🏆 Achievements</h2>
           <div className="achievements-grid">
-            {achievements.map((achievement, index) => (
+            {allAchievements.map((achievement, index) => (
               <div 
                 key={index} 
                 className={`achievement-card ${achievement.earned ? 'earned' : 'locked'}`}

@@ -9,6 +9,7 @@ import Quiz from './components/Quiz';
 import SimplifiedContent from './components/SimplifiedContent';
 import BreakScreen from './components/BreakScreen';
 import Analytics from './components/Analytics';
+import Logout from './components/Logout';
 import './App.css';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
         <Route path="/simplified" element={<SimplifiedContent />} />
         <Route path="/break" element={<BreakScreen />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/logout" element={<Logout />} />
       </Routes>
     </Router>
   );

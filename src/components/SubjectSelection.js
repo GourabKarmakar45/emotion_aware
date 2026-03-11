@@ -7,12 +7,12 @@ const SubjectSelection = () => {
   const [selectedSubject, setSelectedSubject] = useState(null);
 
   const subjects = [
-    { id: 1, name: 'Data Structures', icon: '🗂️', topics: 12 },
-    { id: 2, name: 'Algorithms', icon: '⚙️', topics: 15 },
-    { id: 3, name: 'Web Development', icon: '🌐', topics: 20 },
-    { id: 4, name: 'Machine Learning', icon: '🤖', topics: 18 },
-    { id: 5, name: 'Database Systems', icon: '💾', topics: 10 },
-    { id: 6, name: 'Operating Systems', icon: '💻', topics: 14 }
+    { id: 1, name: 'Data Structures', icon: '🗂️', topics: 6 },
+    { id: 2, name: 'Algorithms', icon: '⚙️', topics: 6 },
+    { id: 3, name: 'Web Development', icon: '🌐', topics: 6 },
+    { id: 4, name: 'Machine Learning', icon: '🤖', topics: 6 },
+    { id: 5, name: 'Database Systems', icon: '💾', topics: 6 },
+    { id: 6, name: 'Operating Systems', icon: '💻', topics: 6 }
   ];
 
   const handleContinue = () => {

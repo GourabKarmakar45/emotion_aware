@@ -1,7 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { lessonContent } from '../data/lessonContent';
+import { saveEmotionData, getUserProgress, saveLessonProgress } from '../services/api';
+import useEmotionDetection from '../hooks/useEmotionDetection';
 import './Lesson.css';
+
+// Emotion emoji mapping
+const getEmotionEmoji = (emotion) => {
+  const emojis = {
+    'Happy': '😊',
+    'Focused': '🎯',
+    'Neutral': '😐',
+    'Confused': '😕',
+    'Sad': '😢',
+    'Angry': '😠',
+    'Surprised': '😲'
+  };
+  return emojis[emotion] || '😐';
+};
 
 const Lesson = () => {
   const navigate = useNavigate();
@@ -10,6 +26,148 @@ const Lesson = () => {
   const topic = location.state?.topic || { name: 'Stack' };
   
   const [currentSection, setCurrentSection] = useState(0);
+  const [sessionTime, setSessionTime] = useState(0); // Session time in seconds
+  const [progressData, setProgressData] = useState({
+    xpEarned: 0,
+    totalStudyTime: 0
+  });
+  
+  // State for sad emotion tracking and break notification
+  const [sadDuration, setSadDuration] = useState(0); // Duration in seconds
+  const [showBreakNotification, setShowBreakNotification] = useState(false);
+  const [suggestedBreakTime, setSuggestedBreakTime] = useState(120); // Default 2 min
+  
+  const videoRef = useRef(null);
+  const sadIntervalRef = useRef(null);
+
+  // Session time tracking - increments every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSessionTime(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch user progress from backend
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const data = await getUserProgress();
+        setProgressData({
+          xpEarned: data.xpEarned || 0,
+          totalStudyTime: data.totalStudyTime || 0
+        });
+      } catch (error) {
+        console.error('Error fetching progress:', error);
+      }
+    };
+    fetchProgress();
+  }, []);
+  
+  // Use emotion detection hook
+  const {
+    isLoading: emotionLoading,
+    error: emotionError,
+    currentEmotion,
+    confidence,
+    emotionHistory,
+    isWebcamOn,
+    startDetection,
+    stopDetection,
+    getEmotionBreakdown
+  } = useEmotionDetection(videoRef);
+
+  // Start emotion detection when component mounts
+  useEffect(() => {
+    startDetection();
+    return () => {
+      stopDetection();
+    };
+  }, []);
+
+  // Track sad emotion duration and trigger break notification
+  useEffect(() => {
+    if (currentEmotion === 'Sad' && confidence > 50) {
+      // Start tracking sad duration if not already tracking
+      if (!sadIntervalRef.current) {
+        sadIntervalRef.current = setInterval(() => {
+          setSadDuration(prev => {
+            const newDuration = prev + 1;
+            
+            // Trigger break notification based on sad duration
+            // 10-20 seconds = 2 min break, 20+ seconds = 4 min break
+            if (newDuration === 10 && !showBreakNotification) {
+              setSuggestedBreakTime(120); // 2 minutes
+              setShowBreakNotification(true);
+            } else if (newDuration === 20 && !showBreakNotification) {
+              setSuggestedBreakTime(240); // 4 minutes
+              setShowBreakNotification(true);
+            }
+            
+            return newDuration;
+          });
+        }, 1000);
+      }
+    } else {
+      // Reset sad duration when emotion changes from Sad
+      if (sadIntervalRef.current) {
+        clearInterval(sadIntervalRef.current);
+        sadIntervalRef.current = null;
+        setSadDuration(0);
+      }
+    }
+
+    return () => {
+      if (sadIntervalRef.current) {
+        clearInterval(sadIntervalRef.current);
+        sadIntervalRef.current = null;
+      }
+    };
+  }, [currentEmotion, confidence, showBreakNotification]);
+
+  // Handle taking a suggested break
+  const handleTakeSuggestedBreak = () => {
+    setShowBreakNotification(false);
+    setSadDuration(0);
+    navigate('/break', { state: { suggestedTime: suggestedBreakTime } });
+  };
+
+  // Handle dismissing the notification
+  const handleDismissNotification = () => {
+    setShowBreakNotification(false);
+    setSadDuration(0);
+  };
+
+  // Save emotion data periodically (every 10 seconds)
+  // Use ref to always get the latest emotion values without stale closure
+  const emotionRef = useRef({ emotion: null, confidence: 0 });
+  
+  useEffect(() => {
+    emotionRef.current = { emotion: currentEmotion, confidence };
+  }, [currentEmotion, confidence]);
+
+  useEffect(() => {
+    const saveInterval = setInterval(() => {
+      const { emotion, confidence } = emotionRef.current;
+      if (emotion && confidence > 50) {
+        saveEmotionData(emotion, confidence).catch(console.error);
+      }
+    }, 10000);
+    
+    return () => clearInterval(saveInterval);
+  }, []);
+
+  // Get emotion breakdown for display
+  const emotionBreakdown = getEmotionBreakdown();
+  
+  // Default breakdown if no data yet
+  const displayEmotionBreakdown = emotionBreakdown.length > 0 ? emotionBreakdown : [
+    { emotion: 'Happy', percentage: 5, color: '#fbbf24' },
+    { emotion: 'Neutral', percentage: 3, color: '#6b7280' },
+    { emotion: 'Focused', percentage: 0, color: '#10b981' },
+    { emotion: 'Confused', percentage: 0, color: '#ef4444' },
+    { emotion: 'Sad', percentage: 0, color: '#3b82f6' }
+  ];
 
   // Get lesson sections for the selected topic
   const lessonSections = lessonContent[topic.name]?.sections || lessonContent['Stack'].sections;
@@ -18,8 +176,10 @@ const Lesson = () => {
     if (currentSection < lessonSections.length - 1) {
       setCurrentSection(currentSection + 1);
     } else {
-      // Lesson complete, go to quiz
-      navigate('/quiz');
+      // Lesson complete - save progress to backend
+      saveLessonProgress(subject.name, topic.name, sessionTime).catch(console.error);
+      // Go to quiz
+      navigate('/quiz', { state: { subject, topic } });
     }
   };
 
@@ -30,7 +190,7 @@ const Lesson = () => {
   };
 
   const handleShowQuiz = () => {
-    navigate('/quiz');
+    navigate('/quiz', { state: { subject, topic } });
   };
 
   const handleSimplify = () => {
@@ -43,6 +203,15 @@ const Lesson = () => {
 
   return (
     <div className="lesson-container">
+      {/* Hidden video element for webcam - used for emotion detection */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{ display: 'none' }}
+      />
+      
       {/* Sidebar */}
       <aside className="lesson-sidebar">
         <div className="logo-section">
@@ -69,23 +238,23 @@ const Lesson = () => {
         </div>
 
         <nav className="nav-menu">
-          <a href="#dashboard" className="nav-item">
+          <a href="#dashboard" className="nav-item" onClick={() => navigate('/start-study')}>
             <span className="nav-icon">📊</span>
             Dashboard
           </a>
-          <a href="#live-session" className="nav-item active">
+          <a href="#live-session" className="nav-item active" onClick={() => navigate('/lesson', { state: { subject, topic } })}>
             <span className="nav-icon">▶️</span>
             Live Session
           </a>
-          <a href="#lessons" className="nav-item">
+          <a href="#lessons" className="nav-item" onClick={() => navigate('/topic-selection', { state: { subject } })}>
             <span className="nav-icon">📚</span>
             Lessons
           </a>
-          <a href="#quizzes" className="nav-item">
+          <a href="#quizzes" className="nav-item" onClick={() => navigate('/quiz', { state: { subject, topic } })}>
             <span className="nav-icon">📝</span>
             Quizzes
           </a>
-          <a href="#analytics" className="nav-item">
+          <a href="#analytics" className="nav-item" onClick={() => navigate('/analytics')}>
             <span className="nav-icon">📈</span>
             Analytics
           </a>
@@ -93,7 +262,7 @@ const Lesson = () => {
             <span className="nav-icon">⚙️</span>
             Settings
           </a>
-          <a href="#logout" className="nav-item">
+          <a href="#logout" className="nav-item" onClick={() => navigate('/logout')}>
             <span className="nav-icon">🚪</span>
             Logout
           </a>
@@ -107,12 +276,45 @@ const Lesson = () => {
           <h1 className="page-title">{topic.name} - {subject.name}</h1>
           <div className="header-actions">
             <div className="user-welcome">
-              <img src="https://i.pravatar.cc/40?img=5" alt="User" className="user-avatar" />
+              {/* <img src="https://i.pravatar.cc/40?img=5" alt="User" className="user-avatar" /> */}
               <span>Welcome, <strong>Emma</strong>!</span>
             </div>
-            <button className="icon-btn notification-btn">
-              🔔
-              <span className="notification-badge"></span>
+            
+            {/* Break Notification Popup */}
+            {showBreakNotification && (
+              <div className="break-notification-popup">
+                <div className="break-notification-content">
+                  <div className="break-notification-icon">😢💆</div>
+                  <div className="break-notification-text">
+                    <p className="break-notification-title">You seem a bit sad</p>
+                    <p className="break-notification-message">
+                      Take a {suggestedBreakTime === 240 ? '4' : '2'} minute break to refresh your mind!
+                    </p>
+                  </div>
+                  <div className="break-notification-actions">
+                    <button 
+                      className="break-notification-accept"
+                      onClick={handleTakeSuggestedBreak}
+                    >
+                      Take Break ☕
+                    </button>
+                    <button 
+                      className="break-notification-dismiss"
+                      onClick={handleDismissNotification}
+                    >
+                      Later
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <button 
+              className={`icon-btn notification-btn ${showBreakNotification ? 'active' : ''}`}
+              onClick={() => showBreakNotification ? handleDismissNotification() : null}
+            >
+              {showBreakNotification ? '💡' : '🔔'}
+              {showBreakNotification && <span className="notification-badge"></span>}
             </button>
             <button className="icon-btn settings-btn">⚙️</button>
           </div>
@@ -173,68 +375,95 @@ const Lesson = () => {
                 <div className="emotion-wave">📊</div>
               </div>
 
-              <div className="current-emotion">
-                <div className="emotion-icon large">😊</div>
-                <div className="emotion-info">
-                  <div className="emotion-label">Emotion: <strong className="emotion-value">Focused</strong></div>
-                  <div className="confidence-label">Confidence: <strong>89%</strong></div>
-                  <div className="confidence-bar">
-                    <div className="confidence-fill" style={{ width: '89%' }}></div>
+              {/* Emotion error message */}
+              {emotionError && (
+                <div className="emotion-error" style={{ padding: '10px', backgroundColor: '#fee2e2', borderRadius: '8px', marginBottom: '10px', fontSize: '12px', color: '#dc2626' }}>
+                  {emotionError}
+                </div>
+              )}
+
+              {/* Loading state */}
+              {emotionLoading && !emotionError && (
+                <div className="current-emotion" style={{ justifyContent: 'center', padding: '20px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div className="emotion-icon large">⏳</div>
+                    <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>Loading emotion detection...</p>
                   </div>
                 </div>
+              )}
+
+              {/* Current emotion display */}
+              {!emotionLoading && !emotionError && (
+                <div className="current-emotion">
+                  <div className="emotion-icon large">{getEmotionEmoji(currentEmotion || 'Neutral')}</div>
+                  <div className="emotion-info">
+                    <div className="emotion-label">
+                      Emotion: <strong className="emotion-value">{currentEmotion || 'Detecting...'}</strong>
+                    </div>
+                    <div className="confidence-label">
+                      Confidence: <strong>{confidence}%</strong>
+                    </div>
+                    <div className="confidence-bar">
+                      <div className="confidence-fill" style={{ width: `${confidence}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Webcam preview - visible to user */}
+              <div className="webcam-preview" style={{ 
+                marginTop: '10px',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                border: '2px solid #e5e7eb'
+              }}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ 
+                    width: '100%', 
+                    height: '120px',
+                    objectFit: 'cover',
+                    transform: 'scaleX(-1)' // Mirror the video
+                  }}
+                />
+              </div>
+              <div style={{ 
+                fontSize: '10px', 
+                color: '#6b7280', 
+                textAlign: 'center',
+                marginTop: '4px'
+              }}>
+                👆 Your camera preview
               </div>
 
+              {/* Emotion breakdown - now uses real data */}
               <div className="emotion-breakdown">
-                <div className="emotion-row">
-                  <span className="emotion-emoji">😊</span>
-                  <span className="emotion-name">Happy</span>
-                  <div className="emotion-bar">
-                    <div className="emotion-bar-fill" style={{ width: '5%', backgroundColor: '#fbbf24' }}></div>
+                {displayEmotionBreakdown.map((item, index) => (
+                  <div key={index} className="emotion-row">
+                    <span className="emotion-emoji">{getEmotionEmoji(item.emotion)}</span>
+                    <span className="emotion-name">{item.emotion}</span>
+                    <div className="emotion-bar">
+                      <div 
+                        className="emotion-bar-fill" 
+                        style={{ width: `${item.percentage}%`, backgroundColor: item.color }}
+                      ></div>
+                    </div>
+                    <span className="emotion-percent">{item.percentage}%</span>
                   </div>
-                  <span className="emotion-percent">5%</span>
-                </div>
-                <div className="emotion-row">
-                  <span className="emotion-emoji">😐</span>
-                  <span className="emotion-name">Neutral</span>
-                  <div className="emotion-bar">
-                    <div className="emotion-bar-fill" style={{ width: '3%', backgroundColor: '#fbbf24' }}></div>
-                  </div>
-                  <span className="emotion-percent">3%</span>
-                </div>
-                <div className="emotion-row">
-                  <span className="emotion-emoji">😕</span>
-                  <span className="emotion-name">Confused</span>
-                  <div className="emotion-bar">
-                    <div className="emotion-bar-fill" style={{ width: '0%', backgroundColor: '#ef4444' }}></div>
-                  </div>
-                  <span className="emotion-percent">0%</span>
-                </div>
-                <div className="emotion-row">
-                  <span className="emotion-emoji">😑</span>
-                  <span className="emotion-name">Bored</span>
-                  <div className="emotion-bar">
-                    <div className="emotion-bar-fill" style={{ width: '0%', backgroundColor: '#a855f7' }}></div>
-                  </div>
-                  <span className="emotion-percent">0%</span>
-                </div>
-                <div className="emotion-row">
-                  <span className="emotion-emoji">😴</span>
-                  <span className="emotion-name">Sleepy</span>
-                  <div className="emotion-bar">
-                    <div className="emotion-bar-fill" style={{ width: '0%', backgroundColor: '#a855f7' }}></div>
-                  </div>
-                  <span className="emotion-percent">0%</span>
-                </div>
+                ))}
               </div>
 
               <div className="xp-earned">
                 <div className="xp-info">
                   <span className="xp-icon">⭐</span>
-                  <span className="xp-text">+80 XP Earned</span>
+                  <span className="xp-text">+{progressData.xpEarned} XP Earned</span>
                 </div>
                 <div className="xp-time">
                   <span className="fire-icon">🔥</span>
-                  <span>23 mins • 44 mins</span>
+                  <span>{Math.floor(sessionTime / 60)} mins • {progressData.totalStudyTime} mins</span>
                 </div>
               </div>
               <div className="xp-progress-bar">
