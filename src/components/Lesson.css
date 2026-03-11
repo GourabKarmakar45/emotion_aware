@@ -1,0 +1,402 @@
+.lesson-container {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a1f 0%, #1a0a2e 50%, #0a0a1f 100%);
+  color: #ffffff;
+}
+
+/* Sidebar - Same as Dashboard */
+.lesson-sidebar {
+  width: 200px;
+  background: rgba(15, 15, 35, 0.8);
+  border-right: 1px solid rgba(168, 85, 247, 0.2);
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main Content */
+.lesson-main {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.lesson-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.lesson-content-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+}
+
+/* Lesson Content Area */
+.lesson-content-area {
+  background: rgba(20, 20, 40, 0.6);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 16px;
+  padding: 30px;
+}
+
+.lesson-progress-bar {
+  margin-bottom: 30px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #b8b8d1;
+}
+
+.progress-percent {
+  color: #a855f7;
+  font-weight: 600;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(168, 85, 247, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* Lesson Section */
+.lesson-section {
+  background: rgba(30, 30, 60, 0.4);
+  border-radius: 12px;
+  padding: 40px;
+  margin-bottom: 30px;
+  min-height: 400px;
+}
+
+.section-icon {
+  font-size: 64px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  color: #ffffff;
+  font-size: 32px;
+  font-weight: 600;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.section-content {
+  color: #b8b8d1;
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.section-content p {
+  margin-bottom: 15px;
+  white-space: pre-line;
+}
+
+/* Navigation */
+.lesson-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.prev-btn {
+  background: rgba(30, 30, 60, 0.8);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #b8b8d1;
+}
+
+.prev-btn:hover:not(:disabled) {
+  background: rgba(168, 85, 247, 0.2);
+  color: #ffffff;
+}
+
+.prev-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.next-btn {
+  background: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%);
+  border: none;
+  color: #ffffff;
+}
+
+.next-btn:hover {
+  background: linear-gradient(90deg, #6d28d9 0%, #9333ea 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+}
+
+/* Emotion Panel - Same as Dashboard */
+.emotion-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.emotion-card {
+  background: rgba(20, 20, 40, 0.6);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.card-icon {
+  font-size: 18px;
+}
+
+.emotion-wave {
+  margin-left: auto;
+  font-size: 18px;
+}
+
+.current-emotion {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.emotion-icon.large {
+  width: 60px;
+  height: 60px;
+  background: rgba(16, 185, 129, 0.2);
+  border: 2px solid #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.emotion-info {
+  flex: 1;
+}
+
+.emotion-label {
+  font-size: 13px;
+  color: #b8b8d1;
+  margin-bottom: 5px;
+}
+
+.emotion-value {
+  color: #10b981;
+  font-size: 16px;
+}
+
+.confidence-label {
+  font-size: 13px;
+  color: #b8b8d1;
+  margin-bottom: 8px;
+}
+
+.confidence-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(168, 85, 247, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  border-radius: 4px;
+}
+
+.emotion-breakdown {
+  margin-bottom: 20px;
+}
+
+.emotion-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.emotion-emoji {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
+}
+
+.emotion-name {
+  font-size: 13px;
+  color: #b8b8d1;
+  width: 70px;
+}
+
+.emotion-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(168, 85, 247, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.emotion-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.emotion-percent {
+  font-size: 13px;
+  color: #b8b8d1;
+  width: 35px;
+  text-align: right;
+}
+
+.xp-earned {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.xp-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.xp-icon {
+  font-size: 18px;
+}
+
+.xp-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #b8b8d1;
+}
+
+.fire-icon {
+  font-size: 16px;
+}
+
+.xp-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(168, 85, 247, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.xp-progress-fill {
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  border-radius: 3px;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.action-btn {
+  padding: 10px;
+  background: rgba(30, 30, 60, 0.6);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 8px;
+  color: #b8b8d1;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+  background: rgba(168, 85, 247, 0.2);
+  color: #ffffff;
+}
+
+.action-btn.primary {
+  background: rgba(124, 58, 237, 0.3);
+  border-color: #7c3aed;
+  color: #ffffff;
+}
+
+.action-btn.primary:hover {
+  background: rgba(124, 58, 237, 0.5);
+}
+
+@media (max-width: 1200px) {
+  .lesson-content-wrapper {
+    grid-template-columns: 1fr;
+  }
+  
+  .emotion-panel {
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lesson-sidebar {
+    width: 70px;
+  }
+  
+  .logo-text {
+    display: none;
+  }
+  
+  .nav-item span:not(.nav-icon) {
+    display: none;
+  }
+
+  .lesson-section {
+    padding: 25px 20px;
+  }
+
+  .section-title {
+    font-size: 24px;
+  }
+
+  .section-content {
+    font-size: 16px;
+  }
+}
